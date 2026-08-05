@@ -1,0 +1,9 @@
+# Project Root Gitignore
+.env
+.env.local
+node_modules/
+.claude/
+dist/
+build/
+*.log
+.DS_Store

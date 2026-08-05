@@ -1,0 +1,1630 @@
+Phase 8 — OpenAI Job Extraction + Backend Integration
+
+In this phase, we will change the flow from:
+
+Browser Page Text
+        |
+        |
+Save raw text
+
+to:
+
+Browser Page Text
+        |
+        |
+Node.js Backend
+        |
+        |
+OpenAI API
+        |
+        |
+Structured Job JSON
+        |
+        |
+Supabase Database
+
+The extension will send the visible page text to the backend. The backend will ask OpenAI to extract:
+
+Job title
+Company
+Location
+Salary
+Employment type
+Skills
+Experience level
+Description summary
+1. Install OpenAI SDK
+
+Inside:
+
+cd backend
+
+Install:
+
+npm install openai
+2. Add OpenAI Environment Variable
+
+Open:
+
+backend/.env
+
+Add:
+
+OPENAI_API_KEY=your_openai_api_key_here
+
+Get your key from:
+
+OpenAI Platform API Keys
+
+3. Create OpenAI Service
+
+Create:
+
+backend/src/openai.js
+
+Add:
+
+import OpenAI from "openai";
+
+
+const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
+
+
+export async function extractJob(text){
+
+
+const response =
+await client.chat.completions.create({
+
+model:"gpt-4.1-mini",
+
+messages:[
+
+{
+role:"system",
+content:
+`
+You extract job information from webpages.
+
+Return ONLY valid JSON.
+
+Schema:
+
+{
+"title":"",
+"company":"",
+"location":"",
+"salary":"",
+"employmentType":"",
+"experience":"",
+"skills":[],
+"description":"",
+"source":""
+}
+`
+},
+
+{
+role:"user",
+content:text.substring(0,12000)
+}
+
+],
+
+temperature:0.2
+
+});
+
+
+return JSON.parse(
+response.choices[0]
+.message
+.content
+);
+
+
+}
+4. Update Job Route
+
+Open:
+
+backend/src/routes/jobs.js
+
+Replace with:
+
+import express from "express";
+
+import {
+supabase
+}
+from "../supabase.js";
+
+import {
+extractJob
+}
+from "../openai.js";
+
+
+const router =
+express.Router();
+
+
+
+router.post(
+"/extract",
+async(req,res)=>{
+
+
+try{
+
+
+const {
+text,
+url
+}=req.body;
+
+
+
+const job =
+await extractJob(text);
+
+
+
+job.url=url;
+
+
+job.source =
+new URL(url)
+.hostname;
+
+
+
+const {
+data,
+error
+}=await supabase
+.from("jobs")
+.insert(job)
+.select();
+
+
+
+if(error)
+throw error;
+
+
+
+res.json({
+success:true,
+job:data[0]
+});
+
+
+
+}
+catch(error){
+
+console.error(error);
+
+res.status(500)
+.json({
+error:
+"Extraction failed"
+});
+
+
+}
+
+
+});
+
+
+
+export default router;
+5. Test Backend
+
+Restart:
+
+npm run dev
+
+Use Postman or curl:
+
+curl -X POST http://localhost:5000/api/jobs/extract \
+-H "Content-Type: application/json" \
+-d '
+{
+"text":"Senior React Developer at ABC Corp. Remote. Requires React, Node.js and TypeScript.",
+"url":"https://example.com/job"
+}
+'
+
+Expected response:
+
+{
+"success":true,
+"job":{
+"title":"Senior React Developer",
+"company":"ABC Corp",
+"location":"Remote",
+"skills":[
+"React",
+"Node.js",
+"TypeScript"
+]
+}
+}
+6. Connect Extension to Backend
+
+Now update the extension.
+
+Create:
+
+extension/src/api.js
+
+Add:
+
+export async function saveJob(data){
+
+
+const response =
+await fetch(
+"http://localhost:5000/api/jobs/extract",
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json"
+},
+
+body:
+JSON.stringify(data)
+
+});
+
+
+return response.json();
+
+}
+7. Update React Popup
+
+Open:
+
+extension/src/App.jsx
+
+Replace:
+
+import {
+useState
+}
+from "react";
+
+import {
+saveJob
+}
+from "./api";
+
+
+function App(){
+
+
+const [result,setResult]
+=
+useState(null);
+
+
+
+async function extractJob(){
+
+
+const tabs =
+await chrome.tabs.query({
+active:true,
+currentWindow:true
+});
+
+
+chrome.tabs.sendMessage(
+tabs[0].id,
+{
+action:"extract"
+},
+
+async(data)=>{
+
+
+const response =
+await saveJob(data);
+
+
+setResult(
+response.job
+);
+
+
+});
+
+}
+
+
+
+return (
+
+<div>
+
+<h2>
+AI Job Saver
+</h2>
+
+
+<button
+onClick={extractJob}
+>
+
+Save Current Job
+
+</button>
+
+
+<pre>
+
+{
+JSON.stringify(
+result,
+null,
+2
+)
+
+}
+
+</pre>
+
+
+</div>
+
+)
+
+}
+
+
+export default App;
+8. Fix Chrome Extension Permissions
+
+Because we call localhost API, update:
+
+manifest.json
+
+Add:
+
+"host_permissions":[
+"<all_urls>",
+"http://localhost:5000/*"
+]
+9. Test Full Flow
+
+Start backend:
+
+cd backend
+
+npm run dev
+
+Start extension:
+
+cd extension
+
+npm run dev
+
+Open Chrome:
+
+chrome://extensions
+
+Enable:
+
+Developer Mode
+
+Load:
+
+extension/dist
+
+(or unpacked extension folder depending on Vite config)
+
+Now test:
+
+Open a job page.
+Click extension.
+Click:
+Save Current Job
+Backend receives page text.
+OpenAI extracts structured data.
+Supabase stores:
+
+Example:
+
+Field	Value
+title	Frontend Engineer
+company	Google
+location	Remote
+skills	React, TypeScript
+source	linkedin.com
+Current Architecture
+
+You now have:
+
+Chrome Extension
+        |
+        |
+Content Script
+        |
+        |
+React Popup
+        |
+        |
+Node.js API
+        |
+        |
+OpenAI GPT-4.1-mini
+        |
+        |
+Supabase PostgreSQL
+Improvements before production
+
+Next we should add:
+
+Phase 9 — Google OAuth Authentication
+
+Will add:
+
+User
+ |
+Google Login
+ |
+JWT Token
+ |
+Save jobs under user_id
+
+Database becomes:
+
+users
+ |
+ |
+jobs
+Phase 10 — Google Sheets Export
+
+Add:
+
+Save Job
+    |
+    |
+Google Sheet row
+Phase 11 — Production Deployment
+
+Deploy:
+
+Backend → Render/Railway
+Supabase → Production database
+Extension → Chrome Web Store
+
+Next step: Phase 9 — Google OAuth Authentication + user-specific job storage.
+
+Next step: Phase 9 — Google OAuth Authentication + user-specific job storage.
+Phase 9 — Google OAuth Authentication + User-Specific Job Storage
+
+In this phase we will add:
+
+✅ Google Login
+✅ User accounts
+✅ JWT authentication
+✅ Store jobs per user
+✅ Protect backend APIs
+
+New architecture:
+
+                 Google OAuth
+                     |
+                     ↓
+              Chrome Extension
+                     |
+                     ↓
+              Google ID Token
+                     |
+                     ↓
+              Node.js Backend
+                     |
+                     ↓
+          Verify Google Identity
+                     |
+                     ↓
+              Create User
+                     |
+                     ↓
+              Save user_id
+                     |
+                     ↓
+              Supabase Jobs Table
+1. Create Google OAuth Application
+
+Open:
+
+Google Cloud Console
+
+Create a project:
+
+Job Saver AI
+
+Go to:
+
+APIs & Services
+        |
+        Credentials
+        |
+        Create Credentials
+        |
+        OAuth Client ID
+
+Choose:
+
+Application Type:
+Chrome Extension
+
+You need your extension ID.
+
+You can get it from:
+
+chrome://extensions
+
+Example:
+
+abcdefghijklmnop123456
+
+Save:
+
+GOOGLE_CLIENT_ID
+2. Enable Google Identity API
+
+In Google Cloud:
+
+APIs & Services
+        |
+        Library
+
+Enable:
+
+Google Identity Services
+3. Install Backend Packages
+
+Inside:
+
+cd backend
+
+Install:
+
+npm install google-auth-library
+npm install jsonwebtoken
+4. Update Environment Variables
+
+Open:
+
+backend/.env
+
+Add:
+
+GOOGLE_CLIENT_ID=your_google_client_id
+
+JWT_SECRET=my_super_secret_key
+
+Example:
+
+JWT_SECRET=job-saver-production-secret-2026
+5. Update Supabase Database
+
+Currently:
+
+jobs
+ |
+ +-- title
+ +-- company
+
+We add users.
+
+Create:
+
+database/schema.sql
+create table users (
+
+id uuid default uuid_generate_v4()
+primary key,
+
+google_id text unique,
+
+email text,
+
+name text,
+
+avatar text,
+
+created_at timestamp default now()
+
+);
+
+
+alter table jobs
+
+add column user_id uuid
+references users(id);
+
+Now:
+
+users
+
+id
+ |
+ |
+jobs.user_id
+6. Create Authentication Service
+
+Create:
+
+backend/src/auth.js
+
+Add:
+
+import {OAuth2Client}
+from "google-auth-library";
+
+import jwt from "jsonwebtoken";
+
+
+const client =
+new OAuth2Client(
+process.env.GOOGLE_CLIENT_ID
+);
+
+
+
+export async function verifyGoogleToken(token){
+
+
+const ticket =
+await client.verifyIdToken({
+
+idToken:token,
+
+audience:
+process.env.GOOGLE_CLIENT_ID
+
+});
+
+
+return ticket.getPayload();
+
+}
+
+
+
+export function createJWT(user){
+
+
+return jwt.sign(
+
+{
+id:user.id,
+email:user.email
+},
+
+process.env.JWT_SECRET,
+
+{
+expiresIn:"7d"
+}
+
+);
+
+}
+7. Create Auth Route
+
+Create:
+
+backend/src/routes/auth.js
+
+Code:
+
+import express from "express";
+
+import {
+supabase
+}
+from "../supabase.js";
+
+import {
+verifyGoogleToken,
+createJWT
+}
+from "../auth.js";
+
+
+const router =
+express.Router();
+
+
+
+router.post(
+"/google",
+
+async(req,res)=>{
+
+
+try{
+
+
+const {
+token
+}=req.body;
+
+
+
+const googleUser =
+await verifyGoogleToken(token);
+
+
+
+let {
+data:user
+}
+=
+await supabase
+
+.from("users")
+
+.select("*")
+
+.eq(
+"google_id",
+googleUser.sub
+)
+
+.single();
+
+
+
+if(!user){
+
+
+const result =
+await supabase
+
+.from("users")
+
+.insert({
+
+google_id:
+googleUser.sub,
+
+email:
+googleUser.email,
+
+name:
+googleUser.name,
+
+avatar:
+googleUser.picture
+
+})
+
+.select()
+.single();
+
+
+
+user=result.data;
+
+
+}
+
+
+
+const jwtToken =
+createJWT(user);
+
+
+
+res.json({
+
+token:jwtToken,
+
+user
+
+});
+
+
+}
+
+catch(error){
+
+res.status(401)
+.json({
+error:"Authentication failed"
+});
+
+}
+
+
+});
+
+
+export default router;
+8. Register Auth Route
+
+Open:
+
+backend/src/server.js
+
+Add:
+
+import authRoutes 
+from "./routes/auth.js";
+
+Then:
+
+app.use(
+"/api/auth",
+authRoutes
+);
+
+Your server now has:
+
+POST
+
+/api/auth/google
+9. Add JWT Middleware
+
+Create:
+
+backend/src/middleware/auth.js
+
+Code:
+
+import jwt from "jsonwebtoken";
+
+
+export function authenticate(
+req,res,next
+){
+
+
+const header =
+req.headers.authorization;
+
+
+if(!header)
+return res.status(401)
+.json({
+error:"No token"
+});
+
+
+
+const token =
+header.split(" ")[1];
+
+
+
+try{
+
+
+req.user =
+jwt.verify(
+token,
+process.env.JWT_SECRET
+);
+
+
+next();
+
+
+}
+
+catch{
+
+res.status(401)
+.json({
+error:"Invalid token"
+});
+
+}
+
+
+}
+10. Protect Job API
+
+Open:
+
+backend/src/routes/jobs.js
+
+Add:
+
+import {
+authenticate
+}
+from "../middleware/auth.js";
+
+Change:
+
+router.post(
+"/extract",
+
+to:
+
+router.post(
+"/extract",
+authenticate,
+11. Save User ID With Jobs
+
+Inside /extract:
+
+Change:
+
+job.url=url;
+
+to:
+
+job.url=url;
+
+job.user_id=req.user.id;
+
+Now every job belongs to the logged-in user.
+
+12. Extension Google Login
+
+Install:
+
+cd extension
+
+npm install @react-oauth/google
+13. Add Google Provider
+
+Create:
+
+src/auth.jsx
+import {
+GoogleOAuthProvider,
+GoogleLogin
+}
+from "@react-oauth/google";
+
+
+export default function Auth(){
+
+return (
+
+<GoogleOAuthProvider
+
+clientId=
+"YOUR_CLIENT_ID"
+
+>
+
+<GoogleLogin
+
+onSuccess={(credential)=>{
+
+chrome.storage.local
+.set({
+
+googleToken:
+credential.credential
+
+});
+
+}}
+
+/>
+
+</GoogleOAuthProvider>
+
+)
+
+}
+14. Send Token With Job Request
+
+Update:
+
+extension/src/api.js
+
+Replace:
+
+export async function saveJob(data)
+
+with:
+
+export async function saveJob(data){
+
+
+const auth =
+await chrome.storage.local
+.get(
+"googleToken"
+);
+
+
+
+return fetch(
+
+"http://localhost:5000/api/jobs/extract",
+
+{
+
+method:"POST",
+
+headers:{
+
+"Content-Type":
+"application/json",
+
+"Authorization":
+"Bearer "
++
+auth.googleToken
+
+},
+
+body:
+JSON.stringify(data)
+
+}
+
+)
+
+.then(r=>r.json());
+
+
+}
+Important Fix
+
+Currently we send a Google token directly as a JWT.
+
+Production flow should be:
+
+Google Token
+       |
+       ↓
+Backend verifies
+       |
+       ↓
+Backend creates JWT
+       |
+       ↓
+Extension stores JWT
+       |
+       ↓
+Future API calls use JWT
+
+For MVP testing this works, but before publishing we should change it.
+
+Phase 9 Result
+
+You now have:
+
+✅ Google Login
+✅ User table
+✅ User identity verification
+✅ Protected API
+✅ Jobs linked to users
+
+Database:
+
+users
+----------------
+id
+google_id
+email
+name
+
+
+jobs
+----------------
+id
+user_id
+title
+company
+location
+skills
+url
+created_at
+Next Step: Phase 10 — Google Sheets API Export
+
+We will add:
+
+Save Job
+    |
+    |
+Supabase
+    |
+    |
+Google Sheets
+    |
+    |
+"My Job Tracker" Spreadsheet
+
+Features:
+
+One-click export
+Create spreadsheet automatically
+Add rows
+Sync updates
+User-specific sheets using OAuth
+Next Step: Phase 10 — Google Sheets API Export
+Phase 10 — Google Sheets API Export
+
+In this phase we will add:
+
+✅ Google Sheets OAuth permission
+✅ Create a spreadsheet for each user
+✅ Export saved jobs automatically
+✅ Add rows to Google Sheets
+✅ Keep user data separated
+
+Final flow:
+
+Chrome Extension
+        |
+        |
+Save Job
+        |
+        |
+Node.js Backend
+        |
+        +----------------+
+        |                |
+    Supabase        Google Sheets API
+        |                |
+        |                ↓
+        |        "My Job Tracker"
+        |
+        ↓
+   User Job Database
+1. Enable Google Sheets API
+
+Open:
+
+Google Cloud Console APIs Library
+
+Select your project.
+
+Enable:
+
+Google Sheets API
+Google Drive API
+2. Update OAuth Scopes
+
+In Google Cloud:
+
+APIs & Services
+        |
+OAuth Consent Screen
+        |
+Scopes
+
+Add:
+
+https://www.googleapis.com/auth/spreadsheets
+https://www.googleapis.com/auth/drive.file
+
+These allow your app to create and edit spreadsheets created by the user.
+
+3. Install Google API Package
+
+Inside backend:
+
+cd backend
+
+npm install googleapis
+4. Create Google Sheets Service
+
+Create:
+
+backend/src/googleSheets.js
+
+Add:
+
+import { google } from "googleapis";
+
+
+export async function createSheetsClient(
+accessToken
+){
+
+const auth =
+new google.auth.OAuth2();
+
+
+auth.setCredentials({
+
+access_token:
+accessToken
+
+});
+
+
+return google.sheets({
+version:"v4",
+auth
+});
+
+}
+5. Create Spreadsheet Function
+
+Update:
+
+backend/src/googleSheets.js
+
+Add:
+
+export async function createJobSheet(
+accessToken
+){
+
+const sheets =
+await createSheetsClient(
+accessToken
+);
+
+
+
+const response =
+await sheets.spreadsheets.create({
+
+resource:{
+
+properties:{
+
+title:
+"My Job Tracker"
+
+}
+
+}
+
+});
+
+
+const spreadsheetId =
+response.data.spreadsheetId;
+
+
+
+await sheets.spreadsheets.values.update({
+
+spreadsheetId,
+
+range:"Sheet1!A1:I2",
+
+valueInputOption:
+"RAW",
+
+resource:{
+
+values:[
+
+[
+"Title",
+"Company",
+"Location",
+"Salary",
+"Skills",
+"Experience",
+"URL",
+"Source",
+"Date"
+]
+
+]
+
+}
+
+});
+
+
+return spreadsheetId;
+
+}
+6. Add Export Function
+
+Still in:
+
+googleSheets.js
+
+Add:
+
+export async function addJobToSheet(
+accessToken,
+spreadsheetId,
+job
+){
+
+
+const sheets =
+await createSheetsClient(
+accessToken
+);
+
+
+
+await sheets.spreadsheets.values.append({
+
+spreadsheetId,
+
+range:
+"Sheet1!A:I",
+
+valueInputOption:
+"USER_ENTERED",
+
+
+resource:{
+
+values:[
+
+[
+
+job.title,
+
+job.company,
+
+job.location,
+
+job.salary,
+
+job.skills?.join(", "),
+
+job.experience,
+
+job.url,
+
+job.source,
+
+new Date()
+.toISOString()
+
+]
+
+]
+
+}
+
+});
+
+
+}
+7. Store User Google Sheet ID
+
+Update Supabase users table:
+
+ALTER TABLE users
+
+ADD COLUMN sheet_id text;
+
+Now:
+
+users
+
+id
+email
+name
+sheet_id
+8. Store Google Access Token
+
+You need a Google OAuth access token with Sheets permission.
+
+Add a column:
+
+ALTER TABLE users
+
+ADD COLUMN google_access_token text;
+
+For production:
+
+Store encrypted tokens
+Use refresh tokens
+Never expose them to frontend
+
+For MVP this keeps development simple.
+
+9. Update Authentication
+
+When Google login happens, store:
+
+google_access_token
+
+in user record.
+
+Example:
+
+await supabase
+.from("users")
+.update({
+
+google_access_token:
+token
+
+})
+.eq(
+"id",
+user.id
+);
+10. Update Job Extraction Route
+
+Open:
+
+backend/src/routes/jobs.js
+
+Add import:
+
+import {
+createJobSheet,
+addJobToSheet
+}
+from "../googleSheets.js";
+
+After saving job:
+
+Find:
+
+const {
+data,
+error
+}=await supabase
+.from("jobs")
+.insert(job)
+.select();
+
+Add:
+
+const savedJob =
+data[0];
+
+
+Then:
+
+let sheetId =
+req.user.sheet_id;
+
+
+if(!sheetId){
+
+
+sheetId =
+await createJobSheet(
+req.user.google_access_token
+);
+
+
+
+await supabase
+
+.from("users")
+
+.update({
+
+sheet_id:
+sheetId
+
+})
+
+.eq(
+"id",
+req.user.id
+);
+
+
+}
+
+
+await addJobToSheet(
+
+req.user.google_access_token,
+
+sheetId,
+
+savedJob
+
+);
+11. Updated Save Flow
+
+Now when user clicks:
+
+Save Current Job
+
+The system does:
+
+1. Extract page text
+
+2. Send to backend
+
+3. OpenAI formats job
+
+4. Save in Supabase
+
+5. Check Google Sheet
+
+6. Create sheet if missing
+
+7. Add row
+Example Google Sheet Output
+
+Spreadsheet:
+
+My Job Tracker
+Title	Company	Location	Skills	URL
+React Developer	ABC Corp	Remote	React, Node	link
+Backend Engineer	XYZ	Delhi	Java, AWS	link
+12. Extension Update
+
+The extension no longer changes much.
+
+The user experience becomes:
+
+Login with Google
+
+↓
+
+Open Job Page
+
+↓
+
+Click Save Job
+
+↓
+
+Done
+
+↓
+
+Check Google Sheet
+Phase 10 Completed
+
+Your MVP now has:
+
+Feature	Status
+Chrome Extension	✅
+React UI	✅
+Node API	✅
+Supabase DB	✅
+Google Login	✅
+User Jobs	✅
+OpenAI Extraction	✅
+Google Sheets Export	✅
+Recommended Next Step: Phase 11 — Production Deployment
+
+We will deploy:
+
+Backend
+ |
+ +--> Render / Railway
+
+Database
+ |
+ +--> Supabase Production
+
+Extension
+ |
+ +--> Chrome Web Store
+
+Secrets
+ |
+ +--> Environment Variables
+
+Also add:
+
+refresh token handling
+rate limiting
+error logging
+extension build pipeline
+privacy policy
+Chrome Web Store requirements
+
+Next: Phase 11 — Deploy the complete AI Job Saver MVP to production.
+
+http://localhost:5000/api/jobs/export
+/api/jobs/extract
