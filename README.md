@@ -90,11 +90,3 @@ The project consists of a Chrome Extension frontend and a Node.js backend.
 - `GET /api/jobs/export`: Generates and downloads an Excel spreadsheet containing all saved jobs.
 
 ---
-
-## 🗺️ Roadmap
-
-- [x] **Phase 8**: OpenAI Integration & Basic Extraction.
-- [x] **Basic Excel Export**: Local `.xlsx` file generation.
-- [ ] **Phase 9**: Google OAuth Authentication & User-specific Storage.
-- [ ] **Phase 10**: Google Sheets API Integration (Cloud Sync).
-- [ ] **Phase 11**: Production Deployment.
