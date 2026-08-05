@@ -7,15 +7,18 @@
     "storage",
     "tabs",
     "identity",
-    "sidePanel",
-    "scripting"
+    "sidePanel"
   ],
   "host_permissions": [
     "<all_urls>",
     "http://localhost:5000/*"
   ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
   "side_panel": {
-    "default_path": "./index.html"
+    "default_path": "index.html"
   },
   "action": {
     "default_title": "Open AI Job Saver"

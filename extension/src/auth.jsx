@@ -1,22 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Button from "./components/ui/Button";
 
-export default function Auth() {
+export default function Auth({ onUserChange }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Load user from storage on mount
-  React.useEffect(() => {
+  useEffect(() => {
     chrome.storage.local.get(["user"], (result) => {
       if (result.user) {
         setUser(result.user);
+        if (onUserChange) onUserChange(result.user);
       }
     });
-  }, []);
+  }, [onUserChange]);
 
   async function handleLogin() {
     setLoading(true);
     try {
-      // Get access token from Chrome identity
       chrome.identity.getAuthToken({ interactive: true }, async (token) => {
         if (chrome.runtime.lastError || !token) {
           console.error("Identity error:", chrome.runtime.lastError);
@@ -32,19 +32,17 @@ export default function Auth() {
           });
 
           const data = await response.json();
-
           if (!response.ok) throw new Error(data.error || "Auth failed");
 
           chrome.storage.local.set({
-            token: data.token, // JWT
-            googleToken: token, // Access Token
+            token: data.token,
+            googleToken: token,
             user: data.user,
           }, () => {
             setUser(data.user);
+            if (onUserChange) onUserChange(data.user);
             setLoading(false);
           });
-
-          console.log("Login successful:", data.user);
         } catch (err) {
           console.error("Backend auth error:", err);
           setLoading(false);
@@ -59,27 +57,38 @@ export default function Auth() {
   async function handleLogout() {
     chrome.storage.local.remove(["token", "googleToken", "user"], () => {
       setUser(null);
+      if (onUserChange) onUserChange(null);
     });
   }
 
   if (user) {
     return (
-      <div style={{ textAlign: 'center', marginBottom: '10px', fontSize: '12px' }}>
-        <span>Welcome, <b>{user.name}</b>! </span>
-        <button onClick={handleLogout} style={{ marginLeft: '5px', cursor: 'pointer' }}>Logout</button>
+      <div className="flex items-center gap-2 pl-2">
+        <img
+          src={user.avatar}
+          className="w-6 h-6 rounded-full border border-slate-200"
+          alt={user.name}
+          onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png'; }}
+        />
+        <Button
+          onClick={handleLogout}
+          variant="ghost"
+          className="text-[10px] h-6 px-2"
+        >
+          Logout
+        </Button>
       </div>
     );
   }
 
   return (
-    <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-      <button
-        onClick={handleLogin}
-        disabled={loading}
-        style={{ padding: '8px 16px', cursor: 'pointer' }}
-      >
-        {loading ? "Connecting..." : "Login with Google"}
-      </button>
-    </div>
+    <Button
+      onClick={handleLogin}
+      isLoading={loading}
+      variant="secondary"
+      className="text-xs h-7 px-3"
+    >
+      Login
+    </Button>
   );
 }
