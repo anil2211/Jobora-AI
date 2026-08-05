@@ -4,10 +4,12 @@ import Button from "./components/ui/Button";
 export default function Auth({ onUserChange }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   useEffect(() => {
     chrome.storage.local.get(["user"], (result) => {
       if (result.user) {
+        setAvatarError(false);
         setUser(result.user);
         if (onUserChange) onUserChange(result.user);
       }
@@ -39,6 +41,7 @@ export default function Auth({ onUserChange }) {
             googleToken: token,
             user: data.user,
           }, () => {
+            setAvatarError(false);
             setUser(data.user);
             if (onUserChange) onUserChange(data.user);
             setLoading(false);
@@ -62,19 +65,37 @@ export default function Auth({ onUserChange }) {
   }
 
   if (user) {
+    const displayName = user.name || (user.email ? user.email.split("@")[0] : "User");
+    const initials = displayName
+      .split(" ")
+      .map((part) => part[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+
+    const showAvatar = user.avatar && !avatarError;
+
     return (
       <div className="flex items-center gap-2 pl-2">
-        <img
-          src={user.avatar}
-          className="w-6 h-6 rounded-full border border-slate-200"
-          alt={user.name}
-          onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png'; }}
-        />
+        {showAvatar ? (
+          <img
+            src={user.avatar}
+            referrerPolicy="no-referrer"
+            className="w-6 h-6 rounded-full border border-slate-200 object-cover"
+            alt={displayName}
+            onError={() => setAvatarError(true)}
+          />
+        ) : (
+          <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-semibold">
+            {initials}
+          </div>
+        )}
         <span
           className="text-xs font-medium text-slate-700 max-w-[80px] truncate"
-          title={user.name}
+          title={displayName}
         >
-          {user.name}
+          {displayName}
         </span>
         <Button
           onClick={handleLogout}

@@ -39,6 +39,16 @@ router.post("/google", async (req, res) => {
 
       if (insertError) throw insertError;
       user = newUser;
+    } else {
+      const { data: updatedUser, error: updateError } = await supabase
+        .from("users")
+        .update({ name: googleUser.name, avatar: googleUser.picture })
+        .eq("id", user.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+      user = updatedUser;
     }
 
     const jwtToken = createJWT(user);
