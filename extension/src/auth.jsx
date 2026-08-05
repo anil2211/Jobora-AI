@@ -70,6 +70,12 @@ export default function Auth({ onUserChange }) {
           alt={user.name}
           onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png'; }}
         />
+        <span
+          className="text-xs font-medium text-slate-700 max-w-[80px] truncate"
+          title={user.name}
+        >
+          {user.name}
+        </span>
         <Button
           onClick={handleLogout}
           variant="ghost"
