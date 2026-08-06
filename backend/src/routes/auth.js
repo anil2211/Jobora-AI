@@ -45,23 +45,30 @@ router.post("/google", async (req, res) => {
       .from("users")
       .insert({
         google_id: googleUser.sub,
-        email: googleUser.email,
-        name: googleUser.name,
-        avatar: googleUser.picture,
+        email: googleUser.email ?? null,
+        name: googleUser.name ?? null,
+        avatar: googleUser.picture ?? null,
       })
       .select();
 
     if (insertError) throw insertError;
+    if (!created?.[0]) throw new Error("User creation failed");
     user = created[0];
   } else {
-    const { data: updated, error: updateError } = await supabase
-      .from("users")
-      .update({ name: googleUser.name, avatar: googleUser.picture })
-      .eq("id", user.id)
-      .select();
+    const updates = {};
+    if (googleUser.name) updates.name = googleUser.name;
+    if (googleUser.picture) updates.avatar = googleUser.picture;
 
-    if (updateError) throw updateError;
-    user = updated[0];
+    if (Object.keys(updates).length > 0) {
+      const { data: updated, error: updateError } = await supabase
+        .from("users")
+        .update(updates)
+        .eq("id", user.id)
+        .select();
+
+      if (updateError) throw updateError;
+      if (updated?.[0]) user = updated[0];
+    }
   }
 
   const jwtToken = createJWT(user);
