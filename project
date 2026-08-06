@@ -1628,3 +1628,49 @@ Next: Phase 11 — Deploy the complete AI Job Saver MVP to production.
 
 http://localhost:5000/api/jobs/export
 /api/jobs/extract
+
+The AI Job Saver project is a productivity tool designed for job seekers to instantly capture, structure, and track job listings from any webpage. It bridges the gap between browsing job boards and maintaining a structured job application tracker.
+
+🚀 Core Workflow
+
+1. Capture: The user triggers the Chrome Extension on a job listing page.
+2. Extraction: A content script extracts the visible text from the page and sends it to the backend.
+3. AI Parsing: The backend uses a Large Language Model (Llama-3.3-70b via Groq API) to transform the raw webpage text into a structured JSON object containing the job title, company, location, salary, and skills.
+4. Storage & Sync:
+  - The structured data is saved to a Supabase (PostgreSQL) database.
+  - Simultaneously, the tool syncs the data to the user's Google Sheets if they are authenticated.
+5. Export: Users can export their entire collection of saved jobs as a formatted Excel (.xlsx) spreadsheet.
+
+🛠️ Technology Stack
+
+- Frontend (Chrome Extension):
+  - Framework: React + Vite
+  - Styling: Tailwind CSS
+  - APIs: Chrome Extension APIs (tabs, scripting, storage.local)
+- Backend (Node.js API):
+  - Framework: Express.js
+  - AI Engine: Groq API (using OpenAI SDK) for structured data extraction.
+  - Database: Supabase (PostgreSQL) for storing users and job data.
+  - Integrations: Google Sheets API for automated syncing.
+  - Utilities: exceljs for generating spreadsheet exports.
+
+📂 Project Structure
+
+- backend/: The API server.
+  - src/server.js: Entry point for the Express application.
+  - src/routes/jobs.js: Logic for AI extraction, database storage, and Excel export.
+  - src/openai.js: AI prompt engineering and parsing logic.
+  - src/supabase.js: Database client configuration.
+  - src/googleSheets.js: Logic for creating and updating Google Sheets.
+- extension/: The browser extension frontend.
+  - src/App.jsx: Main UI for triggering extractions and viewing results.
+  - src/api.js: Client-side logic for communicating with the backend.
+  - src/auth.jsx: Handles user authentication and Google OAuth tokens.
+- database/: Contains schema.sql defining the jobs and users tables.
+
+🔑 Key Features
+
+- One-Click Extraction: No manual copy-pasting; the AI handles the data mapping.
+- Structured Data: Extracts specific fields like salary, experience, and skills into a consistent format.
+- Multi-Channel Storage: Data is mirrored across a database and a Google Sheet for accessibility.
+- Professional Export: Generates a clean Excel file for offline tracking or reporting.

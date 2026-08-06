@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Button from "./components/ui/Button";
+import { API_URL } from "./config";
 
 export default function Auth({ onUserChange }) {
   const [user, setUser] = useState(null);
@@ -27,7 +28,7 @@ export default function Auth({ onUserChange }) {
         }
 
         try {
-          const response = await fetch("http://localhost:5000/api/auth/google", {
+          const response = await fetch(`${API_URL}/api/auth/google`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token }),

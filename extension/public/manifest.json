@@ -12,7 +12,8 @@
   ],
   "host_permissions": [
     "<all_urls>",
-    "http://localhost:5000/*"
+    "http://localhost:5000/*",
+    "https://jobora-ai.onrender.com/*"
   ],
   "side_panel": {
     "default_path": "./index.html"
@@ -37,6 +38,7 @@
     "client_id": "782667921374-el3v12c3nnnre060fasfpmdd9eleeiuk.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile",
       "https://www.googleapis.com/auth/spreadsheets",
       "https://www.googleapis.com/auth/drive.file"
     ]

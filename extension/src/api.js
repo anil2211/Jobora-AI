@@ -1,3 +1,5 @@
+import { API_URL } from "./config";
+
 export async function saveJob(data) {
   try {
     const auth = await chrome.storage.local.get(["token", "googleToken"]);
@@ -7,7 +9,7 @@ export async function saveJob(data) {
     }
 
     const response = await fetch(
-      "http://localhost:5000/api/jobs/extract",
+      `${API_URL}/api/jobs/extract`,
       {
         method: "POST",
         headers: {

@@ -1,0 +1,27 @@
+# Render Blueprint
+#
+# The backend is already deployed separately as a Web Service
+# (https://jobora-ai.onrender.com). This file deploys the Chrome
+# extension build as a Render Static Site so the built extension
+# files can be downloaded/installed from a public URL.
+#
+# To use from the Render dashboard:
+#   1. New -> Blueprint -> select this repo
+#   (or "New Static Site" and point root directory at `extension`).
+
+services:
+  - type: static
+    name: jobora-extension
+    env: static
+    rootDir: extension
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: VITE_API_URL
+        value: https://jobora-ai.onrender.com
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache

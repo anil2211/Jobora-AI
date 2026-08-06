@@ -19,6 +19,9 @@ The project consists of a Chrome Extension frontend and a Node.js backend.
   - Content scripts to extract visible text from the active tab.
   - Popup UI to trigger extraction and view results.
   - Integration with the backend API to save and manage jobs.
+  - Backend URL is configurable via `VITE_API_URL` (see `extension/.env.example`).
+
+### ⚙️ Backend: Node.js API
 
 ### ⚙️ Backend: Node.js API
 - **Framework**: Express.js
@@ -70,14 +73,58 @@ The project consists of a Chrome Extension frontend and a Node.js backend.
    ```bash
    npm install
    ```
-3. **Build the extension**:
+3. **(Optional) Point the build at a specific backend**:
+   Create `extension/.env` and set `VITE_API_URL` (e.g. `https://jobora-ai.onrender.com`).
+   Without it, `npm run dev` uses `http://localhost:5000` and `npm run build` uses `https://jobora-ai.onrender.com`.
+4. **Build the extension**:
    ```bash
    npm run build
    ```
-4. **Load into Chrome**:
+5. **Load into Chrome**:
    - Open `chrome://extensions`
    - Enable **Developer Mode** (top right).
    - Click **Load unpacked** and select the `extension/dist` folder.
+
+---
+
+## 🚀 Deployment (Render)
+
+The **backend** is already deployed as a Render Web Service at `https://jobora-ai.onrender.com`.
+The **extension** is served as a Render **Static Site** (hosts the built `dist/` folder so it can be downloaded and installed).
+
+### Required backend environment variables (already set on Render)
+| Variable | Purpose |
+| --- | --- |
+| `PORT` | Render injects this automatically |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_KEY` | Supabase service-role key |
+| `GROQ_API_KEY` | Groq API key used for job extraction |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `JWT_SECRET` | Secret used to sign JWTs |
+
+### Deploy the extension to Render
+Option A — **Blueprint** (recommended):
+1. Commit and push the repo (includes `render.yaml`).
+2. In Render: **New → Blueprint → connect the repo**.
+3. It creates the `jobora-extension` static site using `extension/` as root, builds with `npm run build`, publishes `dist/`, and sets `VITE_API_URL=https://jobora-ai.onrender.com`.
+
+Option B — **Dashboard**:
+1. In Render: **New → Static Site → connect the repo**.
+2. Set **Root Directory** to `extension`.
+3. **Build Command**: `npm install && npm run build`.
+4. **Publish Directory**: `dist`.
+5. Add the env var `VITE_API_URL=https://jobora-ai.onrender.com` (and `NODE_VERSION=22`).
+6. Deploy.
+
+### Install the extension from the hosted site
+1. Open the Render static-site URL (e.g. `https://jobora-extension.onrender.com`).
+2. Download the files (or `git clone` + `npm run build` locally) — you need the built `dist/` folder.
+3. Open `chrome://extensions`, enable **Developer Mode**, click **Load unpacked**, and select that `dist/` folder.
+
+### Google Cloud Console notes
+- Add the OAuth scope `https://www.googleapis.com/auth/userinfo.profile` to your OAuth consent screen (needed so the extension can read the user's name and profile picture).
+- For `chrome.identity.getAuthToken` to work, the manifest `oauth2.client_id` must be a **Chrome Extension**-type OAuth client, and your extension ID (shown at `chrome://extensions`) must be registered against it. Since an unpacked extension's ID changes with its folder path, re-add the new ID whenever you install from a new location.
 
 ---
 
