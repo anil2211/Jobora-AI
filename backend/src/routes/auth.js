@@ -21,6 +21,12 @@ router.post("/google", async (req, res) => {
     throw err;
   }
 
+  if (!googleUser?.sub) {
+    const err = new Error("Invalid Google token");
+    err.status = 401;
+    throw err;
+  }
+
   // Find existing user. Avoid .single() so real PostgREST errors (missing
   // table/column, RLS, wrong SUPABASE_KEY) surface instead of the generic
   // "Cannot coerce the result to a single JSON object" message.

@@ -17,8 +17,10 @@ export async function verifyGoogleToken(token) {
       const response = await fetch(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${token}`);
       const payload = await response.json();
 
-      if (payload.error) {
-        throw new Error(payload.error_description || "Invalid access token");
+      // Google returns HTTP 400 with { error_description } (no "error" field)
+      // for invalid tokens, so also check response.ok and payload.sub.
+      if (!response.ok || payload.error || !payload.sub) {
+        throw new Error(payload.error_description || payload.error || "Invalid access token");
       }
 
       // Normalize the payload to match the ID token structure (sub, email, name, picture)
