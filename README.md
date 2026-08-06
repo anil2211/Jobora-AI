@@ -139,7 +139,7 @@ manually, the script adds any missing columns (`spreadsheet_id`, `user_id`).
   Render logs for the real PostgREST error.
 - **Name/avatar not shown after login** — ensure the `userinfo.profile` OAuth scope is granted (see Google Cloud notes)
   and re-login so the backend refreshes the stored `name`/`avatar`.
-
+Name and avatar is shown
 ---
 
 ## 🛣️ API Endpoints
