@@ -12,14 +12,13 @@
   ],
   "host_permissions": [
     "<all_urls>",
-    "http://localhost:5000/*",
     "https://jobora-ai.onrender.com/*"
   ],
   "side_panel": {
     "default_path": "./index.html"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js"
   },
   "action": {
     "default_title": "Open AI Job Saver"
@@ -30,7 +29,7 @@
         "<all_urls>"
       ],
       "js": [
-        "./content.js"
+        "src/content.js"
       ]
     }
   ],

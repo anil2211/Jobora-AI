@@ -126,6 +126,20 @@ Option B — **Dashboard**:
 - Add the OAuth scope `https://www.googleapis.com/auth/userinfo.profile` to your OAuth consent screen (needed so the extension can read the user's name and profile picture).
 - For `chrome.identity.getAuthToken` to work, the manifest `oauth2.client_id` must be a **Chrome Extension**-type OAuth client, and your extension ID (shown at `chrome://extensions`) must be registered against it. Since an unpacked extension's ID changes with its folder path, re-add the new ID whenever you install from a new location.
 
+### Production database setup
+The Supabase project referenced by `SUPABASE_URL`/`SUPABASE_KEY` must contain the `users` and `jobs` tables.
+Run `database/schema.sql` in that project's **SQL Editor** (it is idempotent). If you already created the tables
+manually, the script adds any missing columns (`spreadsheet_id`, `user_id`).
+
+### Troubleshooting
+- **`POST /api/auth/google` → 401 / 500 with "Cannot coerce the result to a single JSON object"**
+  This is a Supabase error, not a Google login failure. It means the query against the `users` table failed on the
+  server — most commonly the `users` table doesn't exist in the production database, or the `SUPABASE_KEY` on Render
+  points to a different project / is not the service-role key. Run `database/schema.sql`, then check the backend's
+  Render logs for the real PostgREST error.
+- **Name/avatar not shown after login** — ensure the `userinfo.profile` OAuth scope is granted (see Google Cloud notes)
+  and re-login so the backend refreshes the stored `name`/`avatar`.
+
 ---
 
 ## 🛣️ API Endpoints

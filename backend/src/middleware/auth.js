@@ -2,8 +2,6 @@ import jwt from "jsonwebtoken";
 
 export function authenticate(req, res, next) {
 
-  console.log("Authorization header:", req.headers.authorization);
-
   const header = req.headers.authorization;
 
   if (!header) {
@@ -20,13 +18,11 @@ export function authenticate(req, res, next) {
       process.env.JWT_SECRET
     );
 
-    console.log("Authenticated user:", req.user);
-
     next();
 
   } catch (error) {
 
-    console.log("JWT error:", error.message);
+    console.error(`[${new Date().toISOString()}] JWT Verification failed: ${error.message}`);
 
     res.status(401).json({
       error: "Invalid token",

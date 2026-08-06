@@ -16,7 +16,7 @@ app.use(express.json());
 app.use("/api/jobs", jobRoutes);
 
 app.get("/", (req, res) => {
-  res.send("Job Saver API Running");
+  res.send("Job Saver API is Running");
 });
 
 app.listen(5000, () => {

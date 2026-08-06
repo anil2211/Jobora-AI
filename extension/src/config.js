@@ -1,7 +1,7 @@
-const DEV_API_URL = "http://localhost:5000";
-const PROD_API_URL = "https://jobora-ai.onrender.com";
+const rawUrl = import.meta.env.VITE_API_URL;
 
-const rawUrl =
-  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? DEV_API_URL : PROD_API_URL);
+if (!rawUrl) {
+  throw new Error("VITE_API_URL environment variable is not defined. Please check your .env file.");
+}
 
 export const API_URL = rawUrl.replace(/\/+$/, "");
