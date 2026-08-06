@@ -12,13 +12,15 @@ export async function verifyGoogleToken(token) {
     });
     return ticket.getPayload();
   } catch (err) {
-    // If ID token verification fails, try verifying as an Access Token (used by chrome.identity)
+    // If ID token verification fails, try verifying as an Access Token (used by chrome.identity).
+    // Use the userinfo endpoint (NOT tokeninfo) because tokeninfo does not return
+    // name/picture even when the profile scope is granted.
     try {
-      const response = await fetch(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${token}`);
+      const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const payload = await response.json();
 
-      // Google returns HTTP 400 with { error_description } (no "error" field)
-      // for invalid tokens, so also check response.ok and payload.sub.
       if (!response.ok || payload.error || !payload.sub) {
         throw new Error(payload.error_description || payload.error || "Invalid access token");
       }

@@ -28,17 +28,12 @@ function AppContent() {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       const tab = tabs[0];
 
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ["content.js"],
-      });
-
       chrome.tabs.sendMessage(
         tab.id,
         { action: "extract" },
         async (data) => {
           if (chrome.runtime.lastError) {
-            addToast(`Error: ${chrome.runtime.lastError.message}`, "error");
+            addToast("Could not reach this page. Refresh the job page and try again.", "error");
             setLoading(false);
             return;
           }
