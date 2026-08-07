@@ -7,7 +7,7 @@ import {
   verifyPayment,
 } from "../../api";
 import { useUI } from "../../context/UIContext";
-import { loadRazorpayCheckout } from "../../utils/razorpay";
+import { openRazorpayCheckout } from "../../utils/razorpay";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -67,9 +67,7 @@ export default function PaymentsPanel({ user }) {
     try {
       const data = await createPaymentOrder(PLAN.id);
 
-      const Razorpay = await loadRazorpayCheckout();
-
-      const options = {
+      const outcome = await openRazorpayCheckout({
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
@@ -81,45 +79,32 @@ export default function PaymentsPanel({ user }) {
           name: (user && user.name) || "",
         },
         theme: { color: "#2563eb" },
-        handler: async (response) => {
-          try {
-            await verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            });
-            addToast("Payment successful! Pro is now active.", "success");
-            refresh();
-          } catch (error) {
-            addToast(error.message || "Payment verification failed", "error");
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            addToast("Payment cancelled. No charge was made.", "warning");
-          },
-        },
-      };
+      });
 
-      const rzp = new Razorpay(options);
-
-      rzp.on("payment.failed", async (response) => {
-        const err = (response && response.error) || {};
+      if (outcome.success) {
+        await verifyPayment({
+          razorpay_order_id: outcome.razorpay_order_id,
+          razorpay_payment_id: outcome.razorpay_payment_id,
+          razorpay_signature: outcome.razorpay_signature,
+        });
+        addToast("Payment successful! Pro is now active.", "success");
+        refresh();
+      } else if (outcome.failed) {
         try {
           await reportPaymentFailed({
-            razorpay_order_id: err.metadata && err.metadata.order_id,
-            razorpay_payment_id: err.metadata && err.metadata.payment_id,
-            code: err.code,
-            description: err.description,
+            razorpay_order_id: outcome.order_id,
+            razorpay_payment_id: outcome.payment_id,
+            code: outcome.code,
+            description: outcome.description,
           });
         } catch (reportError) {
           // Logging the failure is best-effort; always show the user the error.
           console.error("Failed to report payment error:", reportError);
         }
         addToast("Payment failed. Please try again.", "error");
-      });
-
-      rzp.open();
+      } else {
+        addToast("Payment cancelled. No charge was made.", "warning");
+      }
     } catch (error) {
       addToast(error.message || "Unable to start payment", "error");
     } finally {
