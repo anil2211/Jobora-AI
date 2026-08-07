@@ -2,11 +2,6 @@ import { Logtail } from "@logtail/node";
 import pino from "pino";
 
 
-const logtail = new Logtail(
-    process.env.BETTERSTACK_SOURCE_TOKEN
-);
-
-
 const logger = pino({
 
     level: process.env.LOG_LEVEL || "info",
@@ -19,6 +14,15 @@ const logger = pino({
     timestamp: pino.stdTimeFunctions.isoTime,
 
 });
+
+
+const logtail = new Logtail(
+    process.env.BETTERSTACK_SOURCE_TOKEN,
+    {
+        endpoint: "https://s2660893.eu-central-1a.betterstackdata.com"
+    }
+);
+
 
 
 async function sendToBetterStack(
@@ -37,14 +41,20 @@ async function sendToBetterStack(
             }
         );
 
-    } catch(error){
+        await logtail.flush();
 
-        console.error(
-            "Better Stack logging failed:",
-            error.message
+    }
+    catch(error){
+
+        logger.error(
+            {
+                error:error.message
+            },
+            "Better Stack logging failed"
         );
 
     }
+
 }
 
 
