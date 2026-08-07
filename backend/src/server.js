@@ -118,5 +118,13 @@ app.listen(PORT,()=>{
     }
   );
 
+  sendToBetterStack(
+    "info",
+    "HEALTH_CHECK",
+    {
+        route: "/"
+    }
+);
+
 
 });
