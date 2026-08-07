@@ -167,9 +167,11 @@ The Pro plan is a one-time payment of ₹299 and unlocks unlimited job saves, AI
 4. Create the `payments` table by running `database/schema.sql` in the Supabase SQL Editor (idempotent).
 5. Rebuild + reload the extension from `extension/dist`.
 
-**Test cards**
-- Success: `4111 1111 1111 1111`, any future expiry, any 3-digit CVV.
-- Failure: `4000 0000 0000 0002`, any future expiry, any CVV.
+**Test cards** (test mode OTP is always `1234` when prompted)
+- Success (domestic): `4012 8888 8888 1881` (Visa) or `5267 3182 4177 0775` (Mastercard), any future expiry, any 3-digit CVV.
+- Success (RuPay): `6070 1000 2000 0004`, any future expiry, any CVV.
+- Failure (declined): `4000 0000 0000 0002`, any future expiry, any CVV.
+- Note: `4111 1111 1111 1111` is a US-BIN (international) card and is rejected with `BAD_REQUEST_ERROR: International cards are not supported` unless the merchant account has international cards enabled.
 
 **Troubleshooting**
 - `RAZORPAY_WEBHOOK_SECRET_MISSING` in the backend logs — the env var is not set on Render; webhooks return `501` until it is.
