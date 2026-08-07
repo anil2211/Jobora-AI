@@ -35,7 +35,7 @@ export function openRazorpayCheckout(options) {
     iframe.src = chrome.runtime.getURL("sandbox/checkout.html");
     iframe.setAttribute(
       "sandbox",
-      "allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+      "allow-scripts allow-forms allow-popups allow-modals"
     );
     iframe.style.cssText =
       "position: fixed; inset: 0; width: 100%; height: 100%; border: 0; z-index: 2147483647;";
