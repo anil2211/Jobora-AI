@@ -52,10 +52,12 @@ export async function createRazorpayOrder({ planId, userId, email }) {
     throw err;
   }
 
+  const shortUserId = userId.replace(/[^a-z0-9]/gi, "").slice(0, 8);
+
   const order = await razorpay.orders.create({
     amount: plan.amount,
     currency: plan.currency,
-    receipt: `job_saver_${userId}_${Date.now()}`,
+    receipt: `job_saver_${shortUserId}_${Date.now()}`,
     notes: {
       plan_id: plan.id,
       user_id: userId,
