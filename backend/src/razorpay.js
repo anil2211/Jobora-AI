@@ -118,3 +118,23 @@ export function verifyWebhookSignature(rawBody, signature) {
 }
 
 export default razorpay;
+
+/**
+ * ----------------------------------------
+ * Normalize an error for logging
+ * ----------------------------------------
+ * Razorpay errors often carry their details in `error.error.description`
+ * with an empty top-level `message`, so log everything meaningful.
+ */
+export function describeError(error) {
+  return {
+    message: (error && error.message) || null,
+    statusCode: (error && error.statusCode) || null,
+    code: (error && error.code) || null,
+    description:
+      (error &&
+        error.error &&
+        (error.error.description || error.error.reason || error.error.field)) ||
+      null,
+  };
+}

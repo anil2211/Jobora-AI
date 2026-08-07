@@ -3,6 +3,7 @@ import express from "express";
 import { authenticate } from "../middleware/auth.js";
 import {
   createRazorpayOrder,
+  describeError,
   getPlan,
   PLANS,
   verifyPaymentSignature,
@@ -99,7 +100,7 @@ router.post("/order", authenticate, async (req, res) => {
     });
   } catch (error) {
     await sendToBetterStack("error", "PAYMENT_ORDER_CREATION_FAILED", {
-      error: error.message,
+      ...describeError(error),
       userId,
       planId: plan.id,
     });
@@ -361,7 +362,10 @@ router.post("/webhook", async (req, res) => {
       });
     }
   } catch (error) {
-    logger.error({ error: error.message }, "Webhook processing failed");
+    logger.error(
+      { ...describeError(error) },
+      "Webhook processing failed"
+    );
   }
 
   res.json({ received: true });
