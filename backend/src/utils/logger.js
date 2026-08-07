@@ -1,5 +1,6 @@
-const pino = require("pino");
-const { Logtail } = require("@logtail/node");
+import { Logtail } from "@logtail/node";
+import pino from "pino";
+
 
 const logtail = new Logtail(
     process.env.BETTERSTACK_SOURCE_TOKEN
@@ -7,6 +8,7 @@ const logtail = new Logtail(
 
 
 const logger = pino({
+
     level: process.env.LOG_LEVEL || "info",
 
     base: {
@@ -15,6 +17,7 @@ const logger = pino({
     },
 
     timestamp: pino.stdTimeFunctions.isoTime,
+
 });
 
 
@@ -45,7 +48,7 @@ async function sendToBetterStack(
 }
 
 
-module.exports = {
+export {
     logger,
     sendToBetterStack
 };
