@@ -8,6 +8,7 @@ const jobRoutes = (await import("./routes/jobs.js")).default;
 const paymentRoutes = (await import("./routes/payments.js")).default;
 
 import { logger, sendToBetterStack } from "./utils/logger.js";
+import { CHECKOUT_PAGE } from "./checkoutPage.js";
 
 
 const app = express();
@@ -58,6 +59,12 @@ app.get("/", (req,res)=>{
 
   res.send("Job Saver API is Running");
 
+});
+
+
+// Razorpay checkout page (embedded by the Chrome extension in an iframe)
+app.get("/checkout", (req, res) => {
+  res.type("html").send(CHECKOUT_PAGE);
 });
 
 

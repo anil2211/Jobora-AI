@@ -193,6 +193,7 @@ The Pro plan is a one-time payment of ₹299 and unlocks unlimited job saves, AI
 - `POST /api/payments/failed`: Records a failed payment (called from the checkout's `payment.failed` handler).
 - `GET /api/payments`: Returns the user's payment history and their active plan.
 - `POST /api/payments/webhook`: Razorpay webhook receiver (signed with `RAZORPAY_WEBHOOK_SECRET` over the raw body).
+- `GET /checkout`: Hosts the Razorpay checkout page (embedded in the extension's side panel via iframe). Not authenticated.
 
 All payment endpoints except the webhook require a `Bearer` JWT.
 

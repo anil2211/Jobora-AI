@@ -1,15 +1,14 @@
+import { API_URL } from "../config";
+
 /**
  * Razorpay checkout integration for MV3 Chrome extensions.
  *
- * The MV3 `extension_pages` CSP only allows `script-src 'self'` and forbids
- * `unsafe-eval`. Razorpay's checkout.js both runs `new Function("return this")`
- * at startup and (in a self-hosted build) cannot be trusted to stay
- * self-contained, so it can never run in a normal extension page.
- *
- * Instead the checkout runs inside a manifest-declared *sandbox page*
- * (`sandbox/checkout.html`), whose CSP explicitly permits remote scripts and
- * `unsafe-eval`. The sandbox drives `new Razorpay(options).open()` and reports
- * the outcome back to this frame via `postMessage`.
+ * checkout.js cannot run inside an extension page (extension_pages CSP forbids
+ * remote scripts and unsafe-eval) and fails inside a sandboxed page (origin
+ * "null" breaks Razorpay's CORS). Instead, the backend hosts a checkout page
+ * at `${API_URL}/checkout` — a normal https origin — which this function
+ * embeds in an iframe over the side panel. The page runs checkout.js exactly
+ * like a merchant website and reports the outcome via postMessage.
  *
  * Returns a Promise that resolves with one of:
  *   { success: true,   razorpay_order_id, razorpay_payment_id, razorpay_signature }
@@ -18,27 +17,20 @@
  */
 export function openRazorpayCheckout(options) {
   return new Promise((resolve) => {
-    if (
-      typeof chrome === "undefined" ||
-      !chrome.runtime ||
-      !chrome.runtime.getURL
-    ) {
-      resolve({
-        success: false,
-        dismissed: true,
-      });
-      return;
-    }
+    const params = new URLSearchParams({
+      key: options.key || "",
+      order_id: options.order_id || "",
+      amount: options.amount || "",
+      currency: options.currency || "INR",
+      name: options.name || "",
+      description: options.description || "",
+      email: (options.prefill && options.prefill.email) || "",
+    });
 
-    const nonce = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const iframe = document.createElement("iframe");
-    iframe.src = chrome.runtime.getURL("sandbox/checkout.html");
-    iframe.setAttribute(
-      "sandbox",
-      "allow-scripts allow-forms allow-popups allow-modals"
-    );
+    iframe.src = `${API_URL}/checkout?${params.toString()}`;
     iframe.style.cssText =
-      "position: fixed; inset: 0; width: 100%; height: 100%; border: 0; z-index: 2147483647;";
+      "position: fixed; inset: 0; width: 100%; height: 100%; border: 0; z-index: 2147483647; background: #fff;";
 
     let settled = false;
 
@@ -57,9 +49,12 @@ export function openRazorpayCheckout(options) {
     }
 
     function onMessage(event) {
+      // Only trust messages from our own checkout page.
+      if (event.origin !== API_URL) return;
       if (event.source !== iframe.contentWindow) return;
+
       const msg = event.data;
-      if (!msg || msg.nonce !== nonce) return;
+      if (!msg || !msg.type) return;
 
       if (msg.type === "checkout.success") {
         const p = msg.payload || {};
@@ -70,9 +65,8 @@ export function openRazorpayCheckout(options) {
           razorpay_signature: p.razorpay_signature,
         });
       } else if (msg.type === "checkout.failed") {
-        const err =
-          (msg.payload && msg.payload.error) || {};
-        const meta = (err.metadata || {});
+        const err = (msg.payload && msg.payload.error) || {};
+        const meta = err.metadata || {};
         finish({
           success: false,
           failed: true,
@@ -89,18 +83,6 @@ export function openRazorpayCheckout(options) {
     }
 
     window.addEventListener("message", onMessage);
-
-    iframe.addEventListener("load", () => {
-      try {
-        iframe.contentWindow.postMessage(
-          { type: "init", nonce, options },
-          "*"
-        );
-      } catch (error) {
-        finish({ success: false, failed: true });
-      }
-    });
-
     document.body.appendChild(iframe);
   });
 }
