@@ -46,3 +46,41 @@ alter table jobs
 -- service role / anon key accordingly.
 alter table users disable row level security;
 alter table jobs disable row level security;
+
+-- =====================================
+-- Payments table (Razorpay)
+-- =====================================
+-- Status lifecycle: created -> paid | failed
+create table if not exists payments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete cascade,
+  razorpay_order_id text unique,
+  razorpay_payment_id text,
+  razorpay_signature text,
+  plan_id text,
+  amount integer,
+  currency text default 'INR',
+  status text default 'created',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Auto-update updated_at on every change
+create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists payments_set_updated_at on payments;
+create trigger payments_set_updated_at
+before update on payments
+for each row execute function set_updated_at();
+
+-- Indexes for fast lookups
+create index if not exists payments_user_id_idx on payments (user_id);
+create index if not exists payments_order_id_idx on payments (razorpay_order_id);
+
+alter table payments disable row level security;

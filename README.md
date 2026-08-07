@@ -22,8 +22,6 @@ The project consists of a Chrome Extension frontend and a Node.js backend.
   - Backend URL is configurable via `VITE_API_URL` (see `extension/.env.example`).
 
 ### ⚙️ Backend: Node.js API
-
-### ⚙️ Backend: Node.js API
 - **Framework**: Express.js
 - **AI Engine**: OpenAI API for structured data extraction.
 - **Database**: Supabase (PostgreSQL) for job storage.
@@ -58,6 +56,14 @@ The project consists of a Chrome Extension frontend and a Node.js backend.
    OPENAI_API_KEY=your_openai_key
    SUPABASE_URL=your_supabase_url
    SUPABASE_KEY=your_supabase_service_role_key
+   GROQ_API_KEY=your_groq_key
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   JWT_SECRET=your_jwt_secret
+   RAZORPAY_KEY_ID=rzp_test_...
+   RAZORPAY_KEY_SECRET=rzp_test_...
+   RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
+   BETTERSTACK_SOURCE_TOKEN=your_logtail_source_token
    ```
 4. **Start the server**:
    ```bash
@@ -102,6 +108,10 @@ The **extension** is served as a Render **Static Site** (hosts the built `dist/`
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `JWT_SECRET` | Secret used to sign JWTs |
+| `RAZORPAY_KEY_ID` | Razorpay Key ID (`rzp_test_...` in test mode) |
+| `RAZORPAY_KEY_SECRET` | Razorpay Key Secret (never expose to the client) |
+| `RAZORPAY_WEBHOOK_SECRET` | Secret used to verify Razorpay webhook signatures |
+| `BETTERSTACK_SOURCE_TOKEN` | Logtail source token (optional, enables Better Stack logging) |
 
 ### Deploy the extension to Render
 Option A — **Blueprint** (recommended):
@@ -139,7 +149,34 @@ manually, the script adds any missing columns (`spreadsheet_id`, `user_id`).
   Render logs for the real PostgREST error.
 - **Name/avatar not shown after login** — ensure the `userinfo.profile` OAuth scope is granted (see Google Cloud notes)
   and re-login so the backend refreshes the stored `name`/`avatar`.
-Name and avatar is shown
+
+### 💳 Payments (Razorpay)
+The Pro plan is a one-time payment of ₹299 and unlocks unlimited job saves, AI extraction and Google Sheets sync.
+
+**How it works**
+1. The extension calls `POST /api/payments/order` with `{"planId":"pro"}` and receives the public `keyId`, `orderId`, `amount` and `currency`.
+2. The Razorpay checkout popup opens with those details; the server only ever exposes the public Key ID — the Key Secret stays on the backend.
+3. On success the checkout returns a signature, which the backend verifies with HMAC-SHA256 before marking the payment `paid` (client-side signature forging is impossible).
+4. A webhook (`payment.captured` / `payment.failed`) acts as the server-to-server source of truth.
+
+**Setup (test mode)**
+1. Create a Razorpay account and grab your **Key ID** and **Key Secret** from the Dashboard → Settings → API Keys (use `rzp_test_...` keys to avoid real charges).
+2. Add `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and a random `RAZORPAY_WEBHOOK_SECRET` to the backend `.env` (and to Render → backend → Environment).
+3. In the Razorpay Dashboard → Settings → Webhooks, add the webhook URL
+   `https://jobora-ai.onrender.com/api/payments/webhook` with events **payment.captured** and **payment.failed**, and set the Secret to your `RAZORPAY_WEBHOOK_SECRET`.
+4. Create the `payments` table by running `database/schema.sql` in the Supabase SQL Editor (idempotent).
+5. Rebuild + reload the extension from `extension/dist`.
+
+**Test cards**
+- Success: `4111 1111 1111 1111`, any future expiry, any 3-digit CVV.
+- Failure: `4000 0000 0000 0002`, any future expiry, any CVV.
+
+**Troubleshooting**
+- `RAZORPAY_WEBHOOK_SECRET_MISSING` in the backend logs — the env var is not set on Render; webhooks return `501` until it is.
+- Webhook returns `400 Invalid webhook signature` — the webhook Secret in the Razorpay Dashboard does not match `RAZORPAY_WEBHOOK_SECRET`, or the request body is being altered by a proxy (the signature is computed over the raw body).
+- `Could not find the table 'public.payments'` — `database/schema.sql` has not been run against the production Supabase project.
+- Order creation fails with an auth error — the Key ID/Secret are placeholders or belong to a different Razorpay account.
+
 ---
 
 ## 🛣️ API Endpoints
@@ -149,5 +186,14 @@ Name and avatar is shown
 - `POST /api/jobs`: Saves a job object directly to the database.
 - `GET /api/jobs`: Retrieves a list of all saved jobs.
 - `GET /api/jobs/export`: Generates and downloads an Excel spreadsheet containing all saved jobs.
+
+### Payments
+- `POST /api/payments/order`: Creates (or reuses) a Razorpay order for a plan. Body: `{"planId":"pro"}`. Returns `keyId`, `orderId`, `amount`, `currency`.
+- `POST /api/payments/verify`: Verifies the Razorpay signature and marks the payment `paid`. Body: `razorpay_order_id`, `razorpay_payment_id`, `razorpay_signature`. Idempotent.
+- `POST /api/payments/failed`: Records a failed payment (called from the checkout's `payment.failed` handler).
+- `GET /api/payments`: Returns the user's payment history and their active plan.
+- `POST /api/payments/webhook`: Razorpay webhook receiver (signed with `RAZORPAY_WEBHOOK_SECRET` over the raw body).
+
+All payment endpoints except the webhook require a `Bearer` JWT.
 
 ---

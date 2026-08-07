@@ -7,6 +7,8 @@ const REQUIRED_ENV_VARS = [
   "SUPABASE_KEY",
   "GROQ_API_KEY",
   "JWT_SECRET",
+  "RAZORPAY_KEY_ID",
+  "RAZORPAY_KEY_SECRET",
 ];
 
 function validateEnv() {

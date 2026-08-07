@@ -5,6 +5,7 @@ import authRoutes from "./routes/auth.js";
 const express = (await import("express")).default;
 const cors = (await import("cors")).default;
 const jobRoutes = (await import("./routes/jobs.js")).default;
+const paymentRoutes = (await import("./routes/payments.js")).default;
 
 import { logger, sendToBetterStack } from "./utils/logger.js";
 
@@ -37,12 +38,17 @@ app.use(cors({
 }));
 
 
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString("utf8");
+  },
+}));
 
 
 // API Routes
 app.use("/api/jobs", jobRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/payments", paymentRoutes);
 
 
 

@@ -22,7 +22,8 @@
     "googleapis": "^174.0.0",
     "jsonwebtoken": "^9.0.3",
     "openai": "^7.4.0",
-    "pino": "^10.3.1"
+    "pino": "^10.3.1",
+    "razorpay": "^2.9.8"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

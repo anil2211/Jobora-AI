@@ -33,6 +33,9 @@
       ]
     }
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' https://checkout.razorpay.com; object-src 'self'"
+  },
   "oauth2": {
     "client_id": "782667921374-el3v12c3nnnre060fasfpmdd9eleeiuk.apps.googleusercontent.com",
     "scopes": [

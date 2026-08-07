@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { saveJob } from "./api";
 import Auth from "./auth";
+import PaymentsPanel from "./components/Payments/PaymentsPanel";
 import { UIProvider, useUI } from "./context/UIContext";
 import Button from "./components/ui/Button";
 import Card from "./components/ui/Card";
@@ -149,6 +150,8 @@ function AppContent() {
             </Card>
           </div>
         )}
+
+        <PaymentsPanel user={user} />
       </main>
 
       {/* Sticky Footer */}
