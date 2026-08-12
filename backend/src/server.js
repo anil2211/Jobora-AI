@@ -7,8 +7,8 @@ const cors = (await import("cors")).default;
 const jobRoutes = (await import("./routes/jobs.js")).default;
 const paymentRoutes = (await import("./routes/payments.js")).default;
 
-import { logger, sendToBetterStack } from "./utils/logger.js";
 import { CHECKOUT_PAGE } from "./checkoutPage.js";
+import { logger, sendToBetterStack } from "./utils/logger.js";
 
 
 const app = express();
@@ -50,7 +50,7 @@ app.use(express.json({
 app.use("/api/jobs", jobRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentRoutes);
-
+app.use("/api/dograh", dograhRoutes);
 
 
 app.get("/", (req,res)=>{
