@@ -1,7 +1,7 @@
 import "./config.js";
 
 import authRoutes from "./routes/auth.js";
-
+import dograhRoutes from "./routes/dograh.js";
 const express = (await import("express")).default;
 const cors = (await import("cors")).default;
 const jobRoutes = (await import("./routes/jobs.js")).default;
